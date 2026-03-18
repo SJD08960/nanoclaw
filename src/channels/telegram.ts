@@ -92,9 +92,15 @@ export async function sendPoolMessage(
     try {
       await poolApis[idx].setMyName(sender);
       await new Promise((r) => setTimeout(r, 2000));
-      logger.info({ sender, groupFolder, poolIndex: idx }, 'Assigned and renamed pool bot');
+      logger.info(
+        { sender, groupFolder, poolIndex: idx },
+        'Assigned and renamed pool bot',
+      );
     } catch (err) {
-      logger.warn({ sender, err }, 'Failed to rename pool bot (sending anyway)');
+      logger.warn(
+        { sender, err },
+        'Failed to rename pool bot (sending anyway)',
+      );
     }
   }
 
@@ -109,7 +115,10 @@ export async function sendPoolMessage(
         await api.sendMessage(numericId, text.slice(i, i + MAX_LENGTH));
       }
     }
-    logger.info({ chatId, sender, poolIndex: idx, length: text.length }, 'Pool message sent');
+    logger.info(
+      { chatId, sender, poolIndex: idx, length: text.length },
+      'Pool message sent',
+    );
   } catch (err) {
     logger.error({ chatId, sender, err }, 'Failed to send pool message');
   }
@@ -135,7 +144,7 @@ export class TelegramChannel implements Channel {
     });
 
     // Command to get chat ID (useful for registration)
-    this.bot.command('chatid', (ctx) => {
+    this.bot.command('chatid', (ctx: any) => {
       const chatId = ctx.chat.id;
       const chatType = ctx.chat.type;
       const chatName =
@@ -150,7 +159,7 @@ export class TelegramChannel implements Channel {
     });
 
     // Command to check bot status
-    this.bot.command('ping', (ctx) => {
+    this.bot.command('ping', (ctx: any) => {
       ctx.reply(`${ASSISTANT_NAME} is online.`);
     });
 
@@ -158,14 +167,14 @@ export class TelegramChannel implements Channel {
     // so they don't also get stored as messages. All other /commands flow through.
     const TELEGRAM_BOT_COMMANDS = new Set(['chatid', 'ping']);
 
-    this.bot.on('message:text', async (ctx) => {
+    this.bot.on('message:text', async (ctx: any) => {
       if (ctx.message.text.startsWith('/')) {
         const cmd = ctx.message.text.slice(1).split(/[\s@]/)[0].toLowerCase();
         if (TELEGRAM_BOT_COMMANDS.has(cmd)) return;
       }
 
       const chatJid = `tg:${ctx.chat.id}`;
-      let content = ctx.message.text;
+      let content = ctx.message.text ?? '';
       const timestamp = new Date(ctx.message.date * 1000).toISOString();
       const senderName =
         ctx.from?.first_name ||
@@ -187,7 +196,7 @@ export class TelegramChannel implements Channel {
       const botUsername = ctx.me?.username?.toLowerCase();
       if (botUsername) {
         const entities = ctx.message.entities || [];
-        const isBotMentioned = entities.some((entity) => {
+        const isBotMentioned = entities.some((entity: any) => {
           if (entity.type === 'mention') {
             const mentionText = content
               .substring(entity.offset, entity.offset + entity.length)
@@ -203,7 +212,7 @@ export class TelegramChannel implements Channel {
 
       // Store chat metadata for discovery
       const isGroup =
-        ctx.chat.type === 'group' || ctx.chat.type === 'supergroup';
+        ctx.chat?.type === 'group' || ctx.chat?.type === 'supergroup';
       this.opts.onChatMetadata(
         chatJid,
         timestamp,
@@ -273,30 +282,30 @@ export class TelegramChannel implements Channel {
       });
     };
 
-    this.bot.on('message:photo', (ctx) => storeNonText(ctx, '[Photo]'));
-    this.bot.on('message:video', (ctx) => storeNonText(ctx, '[Video]'));
-    this.bot.on('message:voice', (ctx) => storeNonText(ctx, '[Voice message]'));
-    this.bot.on('message:audio', (ctx) => storeNonText(ctx, '[Audio]'));
-    this.bot.on('message:document', (ctx) => {
-      const name = ctx.message.document?.file_name || 'file';
+    this.bot.on('message:photo', (ctx: any) => storeNonText(ctx, '[Photo]'));
+    this.bot.on('message:video', (ctx: any) => storeNonText(ctx, '[Video]'));
+    this.bot.on('message:voice', (ctx: any) => storeNonText(ctx, '[Voice message]'));
+    this.bot.on('message:audio', (ctx: any) => storeNonText(ctx, '[Audio]'));
+    this.bot.on('message:document', (ctx: any) => {
+      const name = ctx.message?.document?.file_name || 'file';
       storeNonText(ctx, `[Document: ${name}]`);
     });
-    this.bot.on('message:sticker', (ctx) => {
-      const emoji = ctx.message.sticker?.emoji || '';
+    this.bot.on('message:sticker', (ctx: any) => {
+      const emoji = ctx.message?.sticker?.emoji || '';
       storeNonText(ctx, `[Sticker ${emoji}]`);
     });
-    this.bot.on('message:location', (ctx) => storeNonText(ctx, '[Location]'));
-    this.bot.on('message:contact', (ctx) => storeNonText(ctx, '[Contact]'));
+    this.bot.on('message:location', (ctx: any) => storeNonText(ctx, '[Location]'));
+    this.bot.on('message:contact', (ctx: any) => storeNonText(ctx, '[Contact]'));
 
     // Handle errors gracefully
-    this.bot.catch((err) => {
+    this.bot.catch((err: any) => {
       logger.error({ err: err.message }, 'Telegram bot error');
     });
 
     // Start polling — returns a Promise that resolves when started
     return new Promise<void>((resolve) => {
       this.bot!.start({
-        onStart: (botInfo) => {
+        onStart: (botInfo: { username: string; id: number }) => {
           logger.info(
             { username: botInfo.username, id: botInfo.id },
             'Telegram bot connected',
