@@ -26,8 +26,21 @@ import {
   stopContainer,
 } from './container-runtime.js';
 import { detectAuthMode } from './credential-proxy.js';
+import { readEnvFile } from './env.js';
 import { validateAdditionalMounts } from './mount-security.js';
 import { RegisteredGroup } from './types.js';
+
+// Tool credentials passed through to the container (not secrets — no proxy needed)
+const TOOL_ENV_KEYS = [
+  'BLUELINK_USERNAME',
+  'BLUELINK_PASSWORD',
+  'BLUELINK_PIN',
+  'BLUELINK_REGION',
+  'BLUELINK_BRAND',
+  'BLUELINK_REFRESH_TOKEN',
+  'OPENAI_API_KEY',
+];
+const toolEnv = readEnvFile(TOOL_ENV_KEYS);
 
 // Sentinel markers for robust output parsing (must match agent-runner)
 const OUTPUT_START_MARKER = '---NANOCLAW_OUTPUT_START---';
@@ -236,6 +249,12 @@ function buildContainerArgs(
     args.push('-e', 'ANTHROPIC_API_KEY=placeholder');
   } else {
     args.push('-e', 'CLAUDE_CODE_OAUTH_TOKEN=placeholder');
+  }
+
+  // Pass tool credentials (non-secret env vars the agent scripts need)
+  for (const key of TOOL_ENV_KEYS) {
+    const val = process.env[key] || toolEnv[key];
+    if (val) args.push('-e', `${key}=${val}`);
   }
 
   // Runtime-specific args for host gateway resolution
